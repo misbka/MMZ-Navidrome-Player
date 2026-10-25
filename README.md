@@ -1,4 +1,12 @@
 # Navidrome Player
+![Alt text](https://i.ibb.co/qYgmgDHY/b1.png)
+#
+![Alt text](https://i.ibb.co/8LjTJHhg/b2.png)
+#
+![Alt text](https://i.ibb.co/r253PZ9p/b3.png)
+#
+![Alt text](https://i.ibb.co/8gYDvc63/b4.png)
+
 
 Player de música para **Navidrome** (API Subsonic) construído com React + TypeScript + Vite + Tailwind CSS + shadcn/ui. Projetado para ser empacotado como aplicação desktop com **Electron** — todo o código roda apenas com APIs de navegador (sem dependências de Node no renderer).
 
