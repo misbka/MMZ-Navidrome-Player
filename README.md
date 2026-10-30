@@ -1,112 +1,114 @@
 # Navidrome Player
-![Alt text](https://i.ibb.co/qYgmgDHY/b1.png)
-#
-![Alt text](https://i.ibb.co/8LjTJHhg/b2.png)
-#
-![Alt text](https://i.ibb.co/r253PZ9p/b3.png)
-#
-![Alt text](https://i.ibb.co/8gYDvc63/b4.png)
 
+![Navidrome Player Screenshot 1](https://i.ibb.co/qYgmgDHY/b1.png)
 
-Player de música para **Navidrome** (API Subsonic) construído com React + TypeScript + Vite + Tailwind CSS + shadcn/ui. Projetado para ser empacotado como aplicação desktop com **Electron** — todo o código roda apenas com APIs de navegador (sem dependências de Node no renderer).
+![Navidrome Player Screenshot 2](https://i.ibb.co/8LjTJHhg/b2.png)
 
-## Stack
+![Navidrome Player Screenshot 3](https://i.ibb.co/r253PZ9p/b3.png)
 
-| Camada | Tecnologia |
-| --- | --- |
+![Navidrome Player Screenshot 4](https://i.ibb.co/8gYDvc63/b4.png)
+
+A music player for **Navidrome** (Subsonic API), built with React + TypeScript + Vite + Tailwind CSS + shadcn/ui. Designed to be packaged as a desktop application using **Electron** — all renderer code runs exclusively on browser APIs, with no Node.js dependencies.
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
 | UI | React 19, TypeScript, Vite, Tailwind CSS v4, shadcn/ui (Radix) |
-| Estado | Zustand (+ `persist` no localStorage) |
-| Navegação | react-router-dom (`HashRouter`, compatível com `file://` no Electron) |
+| State Management | Zustand (+ `persist` with localStorage) |
+| Navigation | react-router-dom (`HashRouter`, compatible with `file://` in Electron) |
 | HTTP | axios |
-| Ícones | lucide-react |
-| Toasts | sonner |
-| Drag & drop da fila | @dnd-kit/core + @dnd-kit/sortable |
-| Letras | [LRCLib](https://lrclib.net) |
+| Icons | lucide-react |
+| Toast Notifications | sonner |
+| Queue Drag & Drop | @dnd-kit/core + @dnd-kit/sortable |
+| Lyrics | [LRCLIB](https://lrclib.net) |
 
-## Rodando
+## Getting Started
 
 ```bash
 npm install
 
-# somente web (renderer no navegador)
+# Web only (browser renderer)
 npm run dev           # http://localhost:5173
-npm run build         # typecheck + build de produção em dist/
-npm run preview       # serve o build
+npm run build         # Typecheck + production build in dist/
+npm run preview       # Serve the production build
 
-# desktop (Electron)
-npm run dev:electron  # Vite + Electron com hot reload
-npm run start         # Electron carregando dist/ (requer npm run build antes)
+# Desktop (Electron)
+npm run dev:electron  # Vite + Electron with hot reload
+npm run start         # Electron loading dist/ (requires npm run build first)
 
-# empacotamento
-npm run dist          # instalador NSIS em release/ (Windows)
+# Packaging
+npm run dist          # NSIS installer in release/ (Windows)
 npm run dist:mac      # DMG (macOS)
 npm run dist:linux    # AppImage + deb (Linux)
-npm run icon          # regenera build/icon.png (512) e build/icon.ico (256)
+npm run icon          # Regenerates build/icon.png (512) and build/icon.ico (256)
 ```
 
-O instalador do Windows sai em `release/Navidrome Player-<versão>-setup.exe` (build de demonstração, sem assinatura de código — o Windows SmartScreen pode pedir "Mais informações → Executar assim mesmo").
+The Windows installer is generated at `release/Navidrome Player-<version>-setup.exe` (demonstration build, unsigned — Windows SmartScreen may require you to select "More info → Run anyway").
 
-## Estrutura
+## Project Structure
 
-```
+```text
 src/
   services/
-    subsonic.ts      # API Subsonic (auth por token, álbuns, artistas, playlists, star, scrobble, URLs)
-    lrclib.ts        # letras sincronizadas (parse LRC + busca)
+    subsonic.ts      # Subsonic API (token authentication, albums, artists, playlists, favorites, scrobbling, URLs)
+    lrclib.ts        # Synchronized lyrics (LRC parsing + search)
   store/
-    authStore.ts     # servidores, sessão, login/logout (persist)
-    playerStore.ts   # fila, playback, volume, repeat/shuffle, letras (persist)
+    authStore.ts     # Servers, sessions, login/logout (persist)
+    playerStore.ts   # Queue, playback, volume, repeat/shuffle, lyrics (persist)
   hooks/
-    useNavidrome.ts  # data fetching com loading/erro/refetch
+    useNavidrome.ts  # Data fetching with loading/error/refetch states
     useKeyboardShortcuts.ts
-    useLyrics.ts     # busca automática com cache em memória/IPC
+    useLyrics.ts     # Automatic lyrics lookup with in-memory/IPC cache
   components/
     player/          # AudioEngine, PlayerBar, QueueDrawer, LyricsPanel
     library/         # AlbumCard, ArtistCard, SongRow, PlaylistCard, ContextMenu, CreatePlaylistDialog
     layout/          # Sidebar, Header, Layout
-    ui/              # componentes shadcn/ui
+    ui/              # shadcn/ui components
   pages/             # Login, Home, Albums, AlbumDetail, Artists, ArtistDetail,
                      # Playlists, PlaylistDetail, Favorites, Search
-  lib/               # cn(), formatadores, md5 (para o token de auth)
+  lib/               # cn(), formatters, md5 (for authentication tokens)
   types/             # subsonic.ts, electron.d.ts
 electron/
-  main.cjs           # processo main: janela, IPC, notificações, cache de letras
-  preload.cjs        # contextBridge → window.electronAPI (renderer continua sem Node)
-scripts/             # utilitários: ícone, testes (md5, LRC) e smoke test do app
+  main.cjs           # Main process: window, IPC, notifications, lyrics cache
+  preload.cjs        # contextBridge → window.electronAPI (renderer remains Node-free)
+scripts/             # Utilities: icon generation, tests (md5, LRC), app smoke test
 ```
 
-## Autenticação
+## Authentication
 
-Usa o método **token** do Subsonic (API `1.16.1`, client `navidrome-electron`):
+Uses the Subsonic **token authentication** method (API `1.16.1`, client `navidrome-electron`):
 
-1. gera um `salt` aleatório;
-2. calcula `t = md5(password + salt)` (`src/lib/md5.ts`, implementação própria testada);
-3. envia `u`, `t`, `s`, `v`, `c`, `f=json`;
-4. valida com `ping`.
+1. Generates a random `salt`.
+2. Calculates `t = md5(password + salt)` (`src/lib/md5.ts`, custom tested implementation).
+3. Sends `u`, `t`, `s`, `v`, `c`, `f=json`.
+4. Validates the connection using `ping`.
 
-As credenciais (várias contas/servidores suportados) ficam no `localStorage`. Em erros **40** (credenciais inválidas) ou **50** (sessão inválida) a sessão é limpa e o app redireciona para o login.
+Credentials (multiple accounts/servers supported) are stored in `localStorage`. On errors **40** (invalid credentials) or **50** (invalid session), the session is cleared and the app redirects to the login screen.
 
-## Atalhos de teclado
+## Keyboard Shortcuts
 
-| Tecla | Ação |
-| --- | --- |
-| `Espaço` | play / pause |
+| Key | Action |
+|---|---|
+| `Space` | Play / Pause |
 | `←` / `→` | −5s / +5s |
-| `N` ou `Ctrl+→` | próxima música |
-| `P` ou `Ctrl+←` | música anterior |
-| `M` | mute / unmute |
-| `↑` / `↓` | volume ±10% |
-| `L` | favoritar música atual |
-| `Q` | abrir/fechar fila |
-| `S` | shuffle |
-| `R` | ciclo de repetição (off → all → one) |
-| `?` | modal de atalhos |
+| `N` or `Ctrl+→` | Next track |
+| `P` or `Ctrl+←` | Previous track |
+| `M` | Mute / Unmute |
+| `↑` / `↓` | Volume ±10% |
+| `L` | Favorite current track |
+| `Q` | Open / Close queue |
+| `S` | Shuffle |
+| `R` | Cycle repeat mode (off → all → one) |
+| `?` | Open keyboard shortcuts dialog |
 
-## App desktop (Electron)
+## Desktop App (Electron)
 
-O renderer é totalmente agnóstico de plataforma: ele só usa `window.electronAPI` quando existe e cai para as web APIs quando roda no navegador. **Nenhuma API Node é usada no renderer** (`contextIsolation: true`, `sandbox: true`).
+The renderer is completely platform-agnostic: it only uses `window.electronAPI` when available and falls back to standard web APIs when running in a browser.
 
-`src/types/electron.d.ts` declara a ponte exposta pelo `electron/preload.cjs`:
+**No Node.js APIs are used in the renderer** (`contextIsolation: true`, `sandbox: true`).
+
+`src/types/electron.d.ts` declares the bridge exposed by `electron/preload.cjs`:
 
 ```ts
 interface Window {
@@ -124,43 +126,45 @@ interface Window {
 }
 ```
 
-`electron/main.cjs` cuida de:
+`electron/main.cjs` handles:
 
-- **Janela** — estado (posição/tamanho/maximizado) persistido em `userData/window-state.json`, com validação para não restaurar fora dos displays conectados;
-- **Segurança** — links externos abrem no navegador padrão (`setWindowOpenHandler` + filtro em `will-navigate`), menu reduzido, devtools só no dev;
-- **Notificações** — `Notification` do processo main (`app.setAppUserModelId` para agrupamento na taskbar do Windows);
-- **Letras** — cache persistente em `userData/lyrics-cache.json` (até 4000 entradas, escrita com debounce);
-- **CORS** — injeta `Access-Control-Allow-*` nas respostas para que `axios`/`fetch` funcionem de `file://` contra o servidor Navidrome;
-- **Dev mode** — `npm run dev:electron` sobe o Vite e o Electron com hot reload (`VITE_DEV_SERVER_URL`); sem essa variável ele carrega `dist/index.html` direto.
+- **Window Management** — window state (position, size, maximized status) persisted in `userData/window-state.json`, with validation to prevent restoring windows outside connected displays.
+- **Security** — external links open in the system's default browser (`setWindowOpenHandler` + `will-navigate` filtering), restricted application menu, DevTools available only in development mode.
+- **Notifications** — native `Notification` from the main process (`app.setAppUserModelId` for Windows taskbar grouping).
+- **Lyrics** — persistent cache in `userData/lyrics-cache.json` (up to 4,000 entries, with debounced writes).
+- **CORS** — injects `Access-Control-Allow-*` headers into responses so `axios`/`fetch` can communicate with the Navidrome server from `file://`.
+- **Development Mode** — `npm run dev:electron` starts Vite and Electron with hot reload (`VITE_DEV_SERVER_URL`). Without this variable, Electron loads `dist/index.html` directly.
 
-Integrações de navegador já presentes:
+### Browser Integrations
 
-- **MediaSession API** — metadados + artwork + handlers de play/pause/next/previous/seek;
-- **Notification API** — aviso ao trocar de música (no Electron usa a nativa);
-- **manifest.json** e **service worker** (`public/sw.js`) com cache *CacheFirst* para `getCoverArt` (apenas no navegador — em `file://` o registro é ignorado).
+- **MediaSession API** — metadata, artwork, and play/pause/next/previous/seek handlers.
+- **Notification API** — notification when the track changes (uses native notifications in Electron).
+- **manifest.json** and **service worker** (`public/sw.js`) with *CacheFirst* caching for `getCoverArt` (browser only — registration is skipped under `file://`).
 
-## Funcionalidades
+## Features
 
-- **Home** com carrosséis: adicionados recentemente, tocados recentemente, mais tocados, favoritos.
-- **Álbuns** com filtros (`newest`, `frequent`, `recent`, `starred`, `random`, `alphabeticalByName`).
-- **Detalhe de álbum** — capa, metadados, tocar/shuffle/favoritar e tabela de músicas.
-- **Artistas** e detalhe com bio (`getArtistInfo2`) e grade de álbuns.
-- **Playlists** — criar, editar, remover, adicionar músicas (menu de contexto) e remover música por índice.
-- **Favoritos** — abas de músicas/álbuns/artistas com remoção rápida.
-- **Busca global** — artistas, álbuns e músicas via `search3`.
-- **Fila** com drag-and-drop, tocar agora, tocar a seguir, limpar e remover.
-- **Letras sincronizadas** — busca automática, cache, auto-scroll, seek ao clicar na linha e busca manual.
-- **Scrobble** automático aos 50% ou 4 minutos (o que vier primeiro), uma vez por música.
+- **Home** with carousels: recently added, recently played, most played, and favorites.
+- **Albums** with sorting options (`newest`, `frequent`, `recent`, `starred`, `random`, `alphabeticalByName`).
+- **Album Details** — artwork, metadata, play/shuffle/favorite actions, and track listing.
+- **Artists** and artist details with biography (`getArtistInfo2`) and album grid.
+- **Playlists** — create, edit, delete, add tracks (via context menu), and remove tracks by index.
+- **Favorites** — separate tabs for songs, albums, and artists, with quick removal.
+- **Global Search** — search artists, albums, and songs using `search3`.
+- **Queue Management** — drag-and-drop reordering, play now, play next, clear queue, and remove tracks.
+- **Synchronized Lyrics** — automatic lookup, caching, auto-scroll, seek by clicking a lyric line, and manual search.
+- **Automatic Scrobbling** — submits a scrobble at 50% playback or after 4 minutes, whichever comes first, once per track.
 
-## Testes e utilitários
+## Tests & Utilities
 
 ```bash
-node --experimental-strip-types scripts/test-md5.mts       # MD5 vs crypto nativo
-node --experimental-strip-types scripts/test-lrc.mts       # parser de letras
-node scripts/generate-icon.mjs                             # gera os ícones
-node scripts/verify-rendered.mjs [caminho-do-exe]          # smoke test via CDP
+node --experimental-strip-types scripts/test-md5.mts       # MD5 vs native crypto
+node --experimental-strip-types scripts/test-lrc.mts       # Lyrics parser
+node scripts/generate-icon.mjs                             # Generate icons
+node scripts/verify-rendered.mjs [path-to-exe]              # Smoke test via CDP
 ```
 
-`test-md5.mts` valida a implementação de MD5 contra o `crypto` nativo (UTF-8, múltiplos blocos e bordas de 55/56/63/64 bytes). `test-lrc.mts` valida o parser de letras.
+`test-md5.mts` validates the MD5 implementation against native `crypto` (UTF-8, multiple blocks, and 55/56/63/64-byte boundary cases).
 
-`verify-rendered.mjs` abre o app (por padrão `release/win-unpacked/Navidrome Player.exe`) com remote debugging, conecta via Chrome DevTools Protocol e confirma que o React renderizou (`#root` com conteúdo), que o dark mode está ativo e que `window.electronAPI` existe — um smoke test completo do pipeline Electron + renderer.
+`test-lrc.mts` validates the lyrics parser.
+
+`verify-rendered.mjs` launches the app (by default `release/win-unpacked/Navidrome Player.exe`) with remote debugging, connects through the Chrome DevTools Protocol, and verifies that React has rendered (`#root` contains content), dark mode is active, and `window.electronAPI` exists — a complete smoke test of the Electron + renderer pipeline.
